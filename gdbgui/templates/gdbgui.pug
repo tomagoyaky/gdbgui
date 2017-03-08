@@ -28,18 +28,39 @@ body(style='margin: 0')
     //- into sections (i.e. top, bottom, right)
     div#layout(style="width: 100%; height: 100%;")
 
-    div#top
-        //- binary selection
-        form(role=form)
-            div.input-group.input-group-sm
-                span.input-group-btn
-                    button.btn.btn-primary#set_target_app(type="button") Load This Binary and Args
-                input.form-control#binary(type="text", placeholder="/path/to/target/executable -and -flags", list='past_binaries', style="font-family: courier")
-                datalist#past_binaries
+    //- binary selection
+    div#top(style='width: 100%; height: 45px;')
+        table(style='height:100%; margin: 0; padding-bottom: 30px;')
+            tr(style='height: 100%;')
+            tr
+                td(style='width: 150px')
+                    select.pointer#target_selection_type(name='target_type', style='height: 34px;')
+                        option(value='Load Local Binary') Local Binary
+                        option(value='Attach to PID or File') PID or File
+                        option(value='Connect to Remote Target') Remote Target
+                        option(value='Download Target') Download Target
+                    datalist#past_inferior_targets
 
-                div(style="display:table-cell; vertical-align: middle; width: 80px;")
+                td
+                    button#detach_button.hidden(style='margin: 4px;') detach
+
+                td(style='width: 150px')
+                    span.input-group-btn
+                        button.btn.btn-primary#execute_inferior_button(type="button") Load This Binary and Args
+
+                td(style='width: 100%')
+                    form(role=form)
+                        input.form-control#inferior_target_input(type="text", placeholder="/path/to/target/executable -and -flags", list='past_inferior_targets', style="font-family: courier")
+
+
+                //- TODO add help
+                //- td(style="vertical-align: top; width: 40px; padding-top: 8px;")
+                //-     span#gdbgui_help.glyphicon.glyphicon-question-sign.pointer(style='padding-left: 15px', title='settings')
+
+                td(style="vertical-align: top; width: 40px; padding-top: 8px;")
                     span#gdbgui_settings_button.glyphicon.glyphicon-cog.pointer(style='padding-left: 15px', title='settings')
 
+                td(style="vertical-align: top; width: 40px; padding-top: 8px;")
                     span#shutdown_gdbgui.glyphicon.glyphicon-off.pointer(style='padding-right: 10px; padding-left: 15px', title='shutdown gdbgui (kill gdbgui server and close this tab)')
 
 

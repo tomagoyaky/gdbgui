@@ -1600,58 +1600,79 @@ const Settings = {
 }
 
 /**
- * The BinaryLoader component allows the user to select their binary
+ * The TargetSelection component allows the user to select their inferior target
  * and specify inputs
  */
-const BinaryLoader = {
-    el: $('#binary'),
-    el_past_binaries: $('#past_binaries'),
+const TargetSelection = {
+    el: $('#inferior_target_input'),
+    el_past_inferior_targets: $('#past_inferior_targets'),
+    el_target_selection_type: $('#target_selection_type'),
+    el_execute_inferior_button: $('#execute_inferior_button'),
+    el_detach_button: $('#detach_button'),
     init: function(){
         // events
-        $('#set_target_app').click(BinaryLoader.click_set_target_app)
-        BinaryLoader.el.keydown(BinaryLoader.keydown_on_binary_input)
+        TargetSelection.el_execute_inferior_button.click(TargetSelection.run_inferior_based_on_inputs)
+        TargetSelection.el.keydown(TargetSelection.keydown_on_binary_input)
+        TargetSelection.el_target_selection_type.change(TargetSelection.onchange_target_selection_type)
+        TargetSelection.el_detach_button.click(() => GdbApi.run_gdb_command(`-target-detach`))
 
         try{
-            BinaryLoader.past_binaries = _.uniq(JSON.parse(localStorage.getItem('past_binaries')))
-            BinaryLoader.render(BinaryLoader.past_binaries[0])
+            TargetSelection.past_inferior_targets = _.uniq(JSON.parse(localStorage.getItem('past_inferior_targets')))
+            TargetSelection.render(TargetSelection.past_inferior_targets[0])
         } catch(err){
-            BinaryLoader.past_binaries = []
+            TargetSelection.past_inferior_targets = []
         }
         // update list of old binarys
-        BinaryLoader.render_past_binary_options_datalist()
+        TargetSelection.render_past_binary_options_datalist()
     },
-    past_binaries: [],
+    past_inferior_targets: [],
     keydown_on_binary_input: function(e){
         if(e.keyCode === ENTER_BUTTON_NUM) {
-            BinaryLoader.set_target_app()
+            TargetSelection.run_inferior_based_on_inputs()
         }
     },
     render_past_binary_options_datalist: function(){
-        BinaryLoader.el_past_binaries.html(BinaryLoader.past_binaries.map(b => `<option>${b}</option`))
+        TargetSelection.el_past_inferior_targets.html(TargetSelection.past_inferior_targets.map(b => `<option>${b}</option`))
     },
-    click_set_target_app: function(e){
-        BinaryLoader.set_target_app()
-    },
-    /**
-     * Set the target application and arguments based on the
-     * current fields in the DOM
-     */
-    set_target_app: function(){
-        var binary_and_args = _.trim(BinaryLoader.el.val())
+    run_inferior_based_on_inputs: function(e){
+        // remove list of source files associated with the loaded binary since we're loading a new one
+        State.set('source_file_paths', [])
+
+        var binary_and_args = _.trim(TargetSelection.el.val())
 
         if (_.trim(binary_and_args) === ''){
             StatusBar.render('enter a binary path and arguments', true)
             return
         }
 
-        // save to list of binaries used that autopopulates the input dropdown
-        _.remove(BinaryLoader.past_binaries, i => i === binary_and_args)
-        BinaryLoader.past_binaries.unshift(binary_and_args)
-        localStorage.setItem('past_binaries', JSON.stringify(BinaryLoader.past_binaries) || [])
-        BinaryLoader.render_past_binary_options_datalist()
+        localStorage.setItem('past_inferior_targets', JSON.stringify(TargetSelection.past_inferior_targets) || [])
 
-        // remove list of source files associated with the loaded binary since we're loading a new one
-        State.set('source_file_paths', [])
+        let button_text = TargetSelection.el_execute_inferior_button.text()
+        if(button_text === 'Load Local Binary'){
+            TargetSelection.set_executable_to_debug(binary_and_args)
+
+        }else if(button_text === 'Attach to PID or File'){
+            GdbApi.run_gdb_command(`-target-attach ${binary_and_args}`)
+
+        }else if(button_text === 'Connect to Remote Target'){
+            GdbApi.run_gdb_command(`-target-select ${binary_and_args}`)
+
+        }else if(button_text === 'Download Target'){
+            GdbApi.run_gdb_command('-target-download')
+
+        }else{
+            console.error(`unexpected inferior type ${button_text}`)
+        }
+    },
+    /**
+     * Set the target application and arguments based on the
+     * current fields in the DOM
+     */
+    set_executable_to_debug: function(binary_and_args){
+        // save to list of binaries used that autopopulates the input dropdown
+        _.remove(TargetSelection.past_inferior_targets, i => i === binary_and_args)
+        TargetSelection.past_inferior_targets.unshift(binary_and_args)
+        TargetSelection.render_past_binary_options_datalist()
 
         // find the binary and arguments so gdb can be told which is which
         let binary, args, cmds
@@ -1682,8 +1703,27 @@ const BinaryLoader = {
         State.set('inferior_binary_path', binary)
         GdbApi.get_inferior_binary_last_modified_unix_sec(binary)
     },
+    onchange_target_selection_type: function(e){
+
+        let PLACEHOLDERS = {
+            'Load This Binary and Args': '/path/to/executable arg -flag',
+            'Attach to PID or File': 'pid | gid | file.  Attach to a process pid or a thread group gid.',
+            'Connect to Remote Target': "type paramers ... Connect GDB to the remote target. Type: type of target ('remote', etc). parameters: Device name/host name, etc",
+            'Download Target': '(no args) Loads the executable onto the remote target. It prints out an update message every half second',
+        }
+        let button_text = e.currentTarget.value
+        , placeholder = PLACEHOLDERS[button_text]
+        TargetSelection.el_execute_inferior_button.text(button_text)
+        TargetSelection.el.attr('placeholder', placeholder)
+
+        if(button_text === 'Connect to Remote Target'){
+            TargetSelection.el_detach_button.removeClass('hidden')
+        }else{
+            TargetSelection.el_detach_button.addClass('hidden')
+        }
+    },
     render: function(binary){
-        BinaryLoader.el.val(binary)
+        TargetSelection.el.val(binary)
     },
 }
 
@@ -2729,6 +2769,20 @@ const VisibilityToggler = {
 }
 
 /**
+ * help
+ */
+const GdbGuiHelp = {
+    el: $('#gdbgui_help'),
+    init: function(){
+        ShutdownGdbgui.el.click(GdbGuiHelp.click_help_button)
+    },
+    click_help_button: function(){
+        // TODO
+    },
+}
+
+
+/**
  * Component to shutdown gdbgui
  */
 const ShutdownGdbgui = {
@@ -2944,7 +2998,7 @@ GdbConsoleComponent.init()
 GdbMiOutput.init()
 SourceCode.init()
 Breakpoint.init()
-BinaryLoader.init()
+TargetSelection.init()
 Registers.init()
 SourceFileAutocomplete.init()
 Memory.init()
@@ -2963,8 +3017,8 @@ window.onbeforeunload = () => ('text here makes dialog appear when exiting. Set 
 // and finally, if user supplied an initial command, set it in the UI, and load the
 // inferior binary
 if(_.isString(initial_data.initial_binary_and_args) && _.trim(initial_data.initial_binary_and_args).length > 0){
-    BinaryLoader.el.val(_.trim(initial_data.initial_binary_and_args))
-    BinaryLoader.set_target_app()
+    TargetSelection.el.val(_.trim(initial_data.initial_binary_and_args))
+    TargetSelection.run_inferior_based_on_inputs()
 }
 
 return State
