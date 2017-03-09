@@ -22,6 +22,9 @@ import sys
 import platform
 import pygdbmi
 import re
+from pygments import highlight
+from pygments.lexers import PythonLexer
+from pygments.formatters import HtmlFormatter
 from distutils.spawn import find_executable
 from gdbgui import __version__
 from flask import Flask, request, render_template, jsonify
@@ -57,6 +60,33 @@ app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 socketio = SocketIO(async_mode='eventlet')
 _gdb = {}  # each key is websocket client id (each tab in browser gets its own id), and value is pygdbmi.GdbController instance
 _gdb_reader_thread = None  # T
+
+
+class GdbmiHtmlList(HtmlFormatter):
+
+    def format_unencoded(self, tokensource, outfile):
+        source = self._format_lines(tokensource)
+        if self.hl_lines:
+            source = self._highlight_lines(source)
+        if not self.nowrap:
+            if self.linenos == 2:
+                source = self._wrap_inlinelinenos(source)
+            if self.lineanchors:
+                source = self._wrap_lineanchors(source)
+            if self.linespans:
+                source = self._wrap_linespans(source)
+
+            # source = self.wrap(source, outfile)
+            source = [i[1] for i in self._wrap_div(self._wrap_pre(source)) if i[0] == 1]
+
+
+            if self.linenos == 1:
+                source = self._wrap_tablelinenos(source)
+            if self.full:
+                source = self._wrap_full(source, outfile)
+
+        for t, piece in source:
+            outfile.write(piece)
 
 
 def setup_backend(serve=True, host=DEFAULT_HOST, port=DEFAULT_PORT, debug=False, open_browser=True, testing=False, LLDB=False):
@@ -290,7 +320,15 @@ def read_file():
         try:
             last_modified = os.path.getmtime(path)
             with open(path, 'r') as f:
-                return jsonify({'source_code': f.read().splitlines(),
+
+                code = f.read()
+                import ipdb; ipdb.set_trace()
+                h = GdbmiHtmlList(lineseparator='')
+                lex = PythonLexer()
+                print(highlight(code, lex, h))
+
+
+                return jsonify({'source_code': code.splitlines(),
                                 'path': path,
                                 'last_modified_unix_sec': last_modified})
         except Exception as e:
