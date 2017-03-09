@@ -1049,9 +1049,6 @@ const SourceCode = {
             tbody = []
 
         for (let line of source_code){
-            line = line.replace("<", "&lt;")
-            line = line.replace(">", "&gt;")
-
             let assembly_for_line = SourceCode.get_assembly_html_for_line(show_assembly, assembly, line_num, addr)
 
             tbody.push(`
@@ -1060,8 +1057,8 @@ const SourceCode = {
                         <div>${line_num}</div>
                     </td>
 
-                    <td valign="top" class='line_of_code' data-line=${line_num}>
-                        <pre style='white-space: pre-wrap;'>${line}</pre>
+                    <td valign="top" class='loc' data-line=${line_num}>
+                        <span class='wsp'>${line}</span>
                     </td>
 
                     ${assembly_for_line}

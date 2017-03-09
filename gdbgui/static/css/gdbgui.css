@@ -92,8 +92,8 @@ td{
     background-color: transparent;
 }
 .paused_on_line{
-  background: #84fff9;
-  border: #9898ff;
+  background: #515800;
+  border: #000;
   border-style: solid;
   border-width: 1px;
 }
@@ -146,22 +146,31 @@ td.assembly{
   padding-bottom: 6px;
   white-space: nowrap;
   font-size: 0.9em;
+  color: #ccc;
+}
+#code_container{
+  background-color: #333;
 }
 #code_table{
   font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
 }
 /* set background color over souce code only */
-.source_code_row.line_of_code td{
+.source_code_row.loc td{
   background-color: #f7f7f7;
+  white-space: pre;
+  font-size: 0.9em;
 }
-.line_of_code pre{
+span.wsp{
+  white-space: pre;
+}
+.loc pre{
   margin-left: 10px;
   max-width: 80%;
   min-width: 400px;
 }
 /* when hovering, set background color of entire row */
 .source_code_row:hover td, .source_code_row:hover td pre{
-  background-color: #e2e2e2;
+  background-color: #444;
 }
 .current_assembly_command{
   font-weight: bold;
@@ -169,7 +178,7 @@ td.assembly{
 .padding_left{
   padding-left: 5px;
 }
-.line_of_code{
+.loc{
   height: 18px
 }
 .dropdown-btn {
