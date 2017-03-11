@@ -22,10 +22,8 @@ import sys
 import platform
 import pygdbmi
 import re
-from pygments import highlight
+from htmllistformatter import HtmlListFormatter
 from pygments.lexers import guess_lexer_for_filename
-from pygments.lexers import PythonLexer
-from pygments.formatters import HtmlFormatter
 from distutils.spawn import find_executable
 from gdbgui import __version__
 from flask import Flask, request, render_template, jsonify
@@ -61,38 +59,6 @@ app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 socketio = SocketIO(async_mode='eventlet')
 _gdb = {}  # each key is websocket client id (each tab in browser gets its own id), and value is pygdbmi.GdbController instance
 _gdb_reader_thread = None  # T
-
-
-class GdbguiHtmlList(HtmlFormatter):
-    """A custom pygments class to format html. Returns a list of source code.
-    Each element of the list corresponds to a line of (marked up) source code.
-    The standard HtmlFormatter that this sets the value of a string.
-    """
-
-    def gdbgui_format(self, tokensource):
-        """an updated version of pygments.formatter.format_unencoded"""
-        # import ipdb; ipdb.set_trace()
-        source = self._format_lines(tokensource)
-        if self.hl_lines:
-            source = self._highlight_lines(source)
-        if not self.nowrap:
-            if self.linenos == 2:
-                source = self._wrap_inlinelinenos(source)
-            if self.lineanchors:
-                source = self._wrap_lineanchors(source)
-            if self.linespans:
-                source = self._wrap_linespans(source)
-            if self.linenos == 1:
-                source = self._wrap_tablelinenos(source)
-        # instead of this:
-        # for t, piece in source:
-        #     outfile.write(piece)
-        # evaluate the generator to a list of just source code:
-        IS_CODE_INDEX = 0
-        HTML_VALUE_INDEX = 1
-        IS_CODE_VAL = 1
-        source_list = [html_line[HTML_VALUE_INDEX] for html_line in self._wrap_div(self._wrap_pre(source)) if html_line[IS_CODE_INDEX] == IS_CODE_VAL]
-        return source_list
 
 
 def setup_backend(serve=True, host=DEFAULT_HOST, port=DEFAULT_PORT, debug=False, open_browser=True, testing=False, LLDB=False):
@@ -328,11 +294,12 @@ def read_file():
             with open(path, 'r') as f:
 
                 code = f.read()
-                formatter = GdbguiHtmlList(lineseparator='')  # Don't add newlines after each line
-                lexer = guess_lexer_for_filename(path, code)  # tokenizer
+                formatter = HtmlListFormatter(lineseparator='')  # Don't add newlines after each line
+                # guess lexer from file extension, don't give code sample to aid it since that takes longer
+                lexer = guess_lexer_for_filename(path, '')
                 tokens = lexer.get_tokens(code)  # convert string into tokens
                 # format tokens into nice, marked up list of html
-                highlighted_source_code_list = formatter.gdbgui_format(tokens)
+                highlighted_source_code_list = formatter.get_marked_up_list(tokens)
 
                 return jsonify({'source_code': highlighted_source_code_list,
                                 'path': path,
