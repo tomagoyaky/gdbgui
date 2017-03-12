@@ -51,15 +51,20 @@ elif int(match.groups()[0]) >= 16:
     STARTUP_WITH_SHELL_OFF = True
 
 
-INITIAL_BINARY_AND_ARGS = []  # global
-GDB_PATH = DEFAULT_GDB_EXECUTABLE  # global
-SHOW_GDBGUI_UPGRADES = True
-
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
+app.config['initial_binary_and_args'] = []
+app.config['gdb_path'] = DEFAULT_GDB_EXECUTABLE
+app.config['show_gdb_upgrades'] = True
+
 # switch to gevent once https://github.com/miguelgrinberg/Flask-SocketIO/issues/413 is resolved
 socketio = SocketIO(async_mode='eventlet')
-_gdb = {}  # each key is websocket client id (each tab in browser gets its own id), and value is pygdbmi.GdbController instance
-_gdb_reader_thread = None  # a socketio thread to continuously check for output from all gdb processes
+_gdb_state = {
+              # each key of gdb_controllers is websocket client id (each tab in browser gets its own id),
+              # and value is pygdbmi.GdbController instance
+              'gdb_controllers': {},
+              # a socketio thread to continuously check for output from all gdb processes (cannot be set until server is running)
+              'gdb_reader_thread': None,
+              }
 
 
 def setup_backend(serve=True, host=DEFAULT_HOST, port=DEFAULT_PORT, debug=False, open_browser=True, testing=False, LLDB=False):
@@ -92,10 +97,10 @@ def setup_backend(serve=True, host=DEFAULT_HOST, port=DEFAULT_PORT, debug=False,
 
 
 def verify_gdb_exists():
-    if find_executable(GDB_PATH) is None:
-        pygdbmi.printcolor.print_red('gdb executable "%s" was not found. Is gdb installed? try "sudo apt-get install gdb"' % GDB_PATH)
+    if find_executable(app.config['gdb_path']) is None:
+        pygdbmi.printcolor.print_red('gdb executable "%s" was not found. Is gdb installed? try "sudo apt-get install gdb"' % app.config['gdb_path'])
         sys.exit(1)
-    elif 'lldb' in GDB_PATH.lower() and 'lldb-mi' not in GDB_PATH.lower():
+    elif 'lldb' in app.config['gdb_path'].lower() and 'lldb-mi' not in app.config['gdb_path'].lower():
         pygdbmi.printcolor.print_red('gdbgui cannot use the standard lldb executable. You must use an executable with "lldb-mi" in its name.')
         sys.exit(1)
 
@@ -117,13 +122,10 @@ def colorize(text):
 
 @socketio.on('connect', namespace='/gdb_listener')
 def client_connected():
-    global _gdb_reader_thread
-    global _gdb
-
     dbprint('Client websocket connected in async mode "%s", id %s' % (socketio.async_mode, request.sid))
 
     # give each client their own gdb instance
-    if request.sid not in _gdb.keys():
+    if request.sid not in _gdb_state['gdb_controllers'].keys():
         dbprint('new sid', request.sid)
         if app.config['LLDB'] is True:
             gdb_args = DEFAULT_LLDB_ARGS
@@ -136,14 +138,14 @@ def client_connected():
             # http://stackoverflow.com/questions/39702871/gdb-kind-of-doesnt-work-on-macos-sierra
             gdb_args.append('--init-eval-command=set startup-with-shell off')
 
-        _gdb[request.sid] = GdbController(gdb_path=GDB_PATH, gdb_args=gdb_args)
+        _gdb_state['gdb_controllers'][request.sid] = GdbController(gdb_path=app.config['gdb_path'], gdb_args=gdb_args)
 
     # tell the client browser tab which gdb pid is a dedicated to it
-    emit('gdb_pid', _gdb[request.sid].gdb_process.pid)
+    emit('gdb_pid', _gdb_state['gdb_controllers'][request.sid].gdb_process.pid)
 
     # Make sure there is a reader thread reading. One thread reads all instances.
-    if _gdb_reader_thread is None:
-        _gdb_reader_thread = socketio.start_background_task(target=read_and_forward_gdb_output)
+    if _gdb_state['gdb_reader_thread'] is None:
+        _gdb_state['gdb_reader_thread'] = socketio.start_background_task(target=read_and_forward_gdb_output)
         dbprint('Created background thread to read gdb responses')
 
 
@@ -155,11 +157,11 @@ def run_gdb_command(message):
     Responds only if an error occurs when trying to write the command to
     gdb
     """
-    if _gdb.get(request.sid) is not None:
+    if _gdb_state['gdb_controllers'].get(request.sid) is not None:
         try:
             # the command (string) or commands (list) to run
             cmd = message['cmd']
-            _gdb.get(request.sid).write(cmd, read_response=False)
+            _gdb_state['gdb_controllers'].get(request.sid).write(cmd, read_response=False)
 
         except Exception as e:
             emit('error_running_gdb_command', {'message': str(e)})
@@ -171,10 +173,10 @@ def run_gdb_command(message):
 def client_disconnected():
     """if client disconnects, kill the gdb process connected to the browser tab"""
     dbprint('Client websocket disconnected, id %s' % (request.sid))
-    if request.sid in _gdb.keys():
-        dbprint('Exiting gdb subprocess pid %s' % _gdb[request.sid].gdb_process.pid)
-        _gdb[request.sid].exit()
-        _gdb.pop(request.sid)
+    if request.sid in _gdb_state['gdb_controllers'].keys():
+        dbprint('Exiting gdb subprocess pid %s' % _gdb_state['gdb_controllers'][request.sid].gdb_process.pid)
+        _gdb_state['gdb_controllers'][request.sid].exit()
+        _gdb_state['gdb_controllers'].pop(request.sid)
 
 
 @socketio.on('Client disconnected')
@@ -188,7 +190,7 @@ def read_and_forward_gdb_output():
 
     while True:
         socketio.sleep(0.05)
-        for client_id, gdb in _gdb.items():
+        for client_id, gdb in _gdb_state['gdb_controllers'].items():
             try:
                 if gdb is not None:
                     response = gdb.get_gdb_response(timeout_sec=0, raise_error_on_timeout=False)
@@ -244,8 +246,8 @@ def gdbgui():
     initial_data = {
             'gdbgui_version': __version__,
             'interpreter': interpreter,
-            'initial_binary_and_args': INITIAL_BINARY_AND_ARGS,
-            'show_gdbgui_upgrades': SHOW_GDBGUI_UPGRADES,
+            'initial_binary_and_args': app.config['initial_binary_and_args'],
+            'show_gdbgui_upgrades': app.config['show_gdbgui_upgrades'],
         }
 
     return render_template('gdbgui.pug',
@@ -318,12 +320,9 @@ def read_file():
 
 def main():
     """Entry point from command line"""
-    global INITIAL_BINARY_AND_ARGS
-    global GDB_PATH
-    global SHOW_GDBGUI_UPGRADES
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("cmd", nargs='*', help='(Optional) The binary and arguments to run in gdb. This is a way to script the intial loading of the inferior'
-        " binary  you wish to debug. For example gdbgui './mybinary myarg -flag1 -flag2'", default=INITIAL_BINARY_AND_ARGS)
+        " binary  you wish to debug. For example gdbgui './mybinary myarg -flag1 -flag2'", default=app.config['initial_binary_and_args'])
 
     parser.add_argument('-p', '--port', help='The port on which gdbgui will be hosted. Defaults to %s' % DEFAULT_PORT, default=DEFAULT_PORT)
     parser.add_argument('--host', help='The host ip address on which gdbgui serve. Defaults to %s' % DEFAULT_HOST, default=DEFAULT_HOST)
@@ -343,9 +342,9 @@ def main():
         print(__version__)
         return
 
-    INITIAL_BINARY_AND_ARGS = ' '.join(args.cmd)
-    GDB_PATH = args.gdb
-    SHOW_GDBGUI_UPGRADES = not args.hide_gdbgui_upgrades
+    app.config['initial_binary_and_args'] = ' '.join(args.cmd)
+    app.config['gdb_path'] = args.gdb
+    app.config['show_gdbgui_upgrades'] = not args.hide_gdbgui_upgrades
     verify_gdb_exists()
     if args.remote:
         args.host = '0.0.0.0'
