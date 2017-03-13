@@ -69,6 +69,8 @@ let State = {
         debug: debug,  // if gdbgui is run in debug mode
         interpreter: initial_data.interpreter,  // either 'gdb' or 'llvm'
         gdbgui_version: initial_data.gdbgui_version,
+        themes: initial_data.themes,
+        current_theme: localStorage.getItem('theme') || initial_data.themes[0],
         latest_gdbgui_version: '(not fetched)',
         show_gdbgui_upgrades: initial_data.show_gdbgui_upgrades,
         gdb_version: localStorage.getItem('gdb_version') || undefined,  // this is parsed from gdb's output, but initialized to undefined
@@ -387,7 +389,6 @@ const GdbApi = {
                 Each tab has its own instance of gdb running on the backend. Open new tab to start new instance of gdb.`)
             debug_print('disconnected')
         });
-
     },
     click_run_button: function(e){
         window.dispatchEvent(new Event('event_inferior_program_running'))
@@ -994,7 +995,24 @@ const SourceCode = {
     make_current_line_visible: function(){
         SourceCode.scroll_to_jq_selector($("#scroll_to_line"))
     },
+    set_theme_in_dom: function(){
+        let code_container = SourceCode.el_code_container
+        , old_theme = code_container.data('theme')
+        , current_theme = State.get('current_theme')
+        if(State.get('themes').indexOf(current_theme) === -1){
+            // somehow an invalid theme got set, update with a valid one
+            State.set('current_theme', State.get('themese')[0])
+        }
+
+        if(old_theme !== current_theme){
+            code_container.removeClass(old_theme)
+            code_container.data('theme', current_theme)
+            code_container.addClass(current_theme)
+        }
+    },
     render: function(){
+        SourceCode.set_theme_in_dom()
+
         let fullname = State.get('fullname_to_render')
         , current_line_of_source_code = parseInt(State.get('current_line_of_source_code'))
         , addr = State.get('current_assembly_address')
@@ -1145,7 +1163,7 @@ const SourceCode = {
 
         // make background blue if gdb is paused on a line in this file
         if(inferior_program_is_paused_in_this_file){
-            let jq_line = $(`.line_of_code[data-line=${State.get('paused_on_frame').line}]`)
+            let jq_line = $(`.loc[data-line=${State.get('paused_on_frame').line}]`)
             if(jq_line.length === 1){
                 jq_line.offset()  // needed so DOM registers change and re-draws animation
                 jq_line.addClass('paused_on_line')
@@ -1157,7 +1175,7 @@ const SourceCode = {
 
         // make this line flash ONLY if it's NOT the line we're paused on
         if(line_num && !paused_on_current_line){
-            let jq_line = $(`.line_of_code[data-line=${line_num}]`)
+            let jq_line = $(`.loc[data-line=${line_num}]`)
             if(jq_line.length === 1){
                 // https://css-tricks.com/restart-css-animation/
                 jq_line.offset()  // needed so DOM registers change and re-draws animation
@@ -1197,7 +1215,7 @@ const SourceCode = {
             },
             error: function(response){
                 StatusBar.render_ajax_error_msg(response)
-                let source_code = [`failed to fetch file ${fullname}`]
+                let source_code = [`failed to fetch file at path "${fullname}"`]
                 SourceCode.add_source_file_to_cache(fullname, source_code, {}, 0)
             },
             complete: function(){
@@ -1499,10 +1517,11 @@ const Registers = {
  */
 const Settings = {
     el: $('#gdbgui_settings_button'),
+    pane: $('#gdb_settings_modal'),
     init: function(){
+        $('body').on('change', '#theme_selector', Settings.theme_selection_changed)
+        $('body').on('click', '.toggle_settings_view', Settings.click_toggle_settings_view)
         window.addEventListener('event_global_state_changed', Settings.render)
-
-        Settings.el.click(Settings.click_settings_button)
 
         // Fetch the latest version only if using in normal mode. If debugging, we tend to
         // refresh quite a bit, which might make too many requests to github and cause them
@@ -1542,6 +1561,17 @@ const Settings = {
         }
     },
     render: function(){
+        let theme_options = ''
+        , current_theme = State.get('current_theme')
+
+        for(let theme of State.get('themes')){
+            if(theme === current_theme){
+                theme_options += `<option selected value=${theme}>${theme}</option>`
+            }else{
+                theme_options += `<option value=${theme}>${theme}</option>`
+            }
+        }
+
         $('#settings_body').html(
             `<table class='table'>
             <tbody>
@@ -1563,6 +1593,9 @@ const Settings = {
                 </div>
 
             <tr><td>
+                Theme: <select id=theme_selector>${theme_options}
+
+            <tr><td>
                 gdb pid for this tab: ${State.get('gdb_pid')}
 
             <tr><td>
@@ -1577,8 +1610,12 @@ const Settings = {
 
             )
     },
-    click_settings_button: function(){
-        $('#gdb_settings_modal').modal('show')
+    click_toggle_settings_view: function(){
+        Settings.pane.toggleClass('hidden')
+    },
+    theme_selection_changed: function(e){
+        State.set('current_theme', e.currentTarget.value)
+        localStorage.setItem('theme', e.currentTarget.value)
     },
     auto_add_breakpoint_to_main: function(){
         let checked = $('#checkbox_auto_add_breakpoint_to_main').prop('checked')
@@ -2543,7 +2580,7 @@ const Locals = {
                         <span class='var_type'>
                             ${_.trim(local.type)}
                         </span>
-                        <p>
+                        <br>
                         `
             }
 

@@ -12,7 +12,9 @@ head
     link(href='static/vendor/css/messenger.css', rel='stylesheet')
     link(href='static/vendor/css/awesomeplete.css', rel='stylesheet')
     link(href='static/vendor/css/w2ui-1.4.3.css', rel='stylesheet')
-    link(href='static/vendor/css/pygments/monokai.css', rel='stylesheet')
+
+    - for theme in themes
+        link(href='static/vendor/css/pygments/#{theme}.css', rel='stylesheet')
 
     script(type="text/javascript" src='static/vendor/js/jquery.min.js')
     script(type="text/javascript" src='static/vendor/js/jquery.flot-0.8.3.min.js')
@@ -39,7 +41,7 @@ body(style='margin: 0')
                 datalist#past_binaries
 
                 div(style="display:table-cell; vertical-align: middle; width: 80px;")
-                    span#gdbgui_settings_button.glyphicon.glyphicon-cog.pointer(style='padding-left: 15px', title='settings')
+                    span#gdbgui_settings_button.glyphicon.glyphicon-cog.pointer.toggle_settings_view(style='padding-left: 15px', title='settings')
 
                     span#shutdown_gdbgui.glyphicon.glyphicon-off.pointer(style='padding-right: 10px; padding-left: 15px', title='shutdown gdbgui (kill gdbgui server and close this tab)')
 
@@ -191,16 +193,14 @@ body(style='margin: 0')
 
 
 //- modal window, hidden by default
-#gdb_settings_modal.modal.fade(role='dialog')
-    .modal-dialog
-        .modal-content(style='padding: 20px;')
-            button.close(type='button', data-dismiss='modal') ×
-            h4 Settings
+#gdb_settings_modal.hidden
+    button.close.toggle_settings_view(type='button') ×
+    h4 Settings
 
-            #settings_body
+    #settings_body
 
-            div(style='margin-top: 20px;')
-                button.btn.btn-success(type='button', data-dismiss='modal') Close
+    div(style='margin-top: 20px;')
+        button.btn.btn-success.toggle_settings_view(type='button', data-dismiss='modal') Close
 
 script.
     initial_data = JSON.parse('!{initial_data}')

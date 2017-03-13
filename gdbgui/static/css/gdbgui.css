@@ -91,12 +91,6 @@ td{
     width: 100%;
     background-color: transparent;
 }
-.paused_on_line{
-  background: #515800;
-  border: #000;
-  border-style: solid;
-  border-width: 1px;
-}
 .highlight{
   background: rgba(255, 255, 0, 0.5) !important;
 }
@@ -145,33 +139,19 @@ div.breakpoint:hover a span.breakpoint_trashcan, .variable:hover .right_help_ico
 td.assembly{
   padding-bottom: 6px;
   white-space: nowrap;
-  font-size: 0.9em;
-  color: #ccc;
-}
-#code_container{
-  background-color: #333;
+  font-size: 0.8em;
 }
 #code_table{
   font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
 }
-/* set background color over souce code only */
-.source_code_row.loc td{
-  background-color: #f7f7f7;
-  white-space: pre;
-  font-size: 0.9em;
-}
+
+/* wsp == whitespace. Needed to preserve leading whitespace.
+  this span wraps syntax-highlighted source code */
 span.wsp{
+  font-size: 0.8em;
   white-space: pre;
 }
-.loc pre{
-  margin-left: 10px;
-  max-width: 80%;
-  min-width: 400px;
-}
-/* when hovering, set background color of entire row */
-.source_code_row:hover td, .source_code_row:hover td pre{
-  background-color: #444;
-}
+
 .current_assembly_command{
   font-weight: bold;
 }
@@ -192,26 +172,6 @@ span.wsp{
 }
 .memory_char:empty{
   content: ?;
-}
-/* show a flash of color */
-.flash {
-    -webkit-animation-name: flash-animation;
-    -webkit-animation-duration: 3.0s;
-
-    animation-name: flash-animation;
-    animation-duration: 3.0s;
-}
-
-@-webkit-keyframes flash-animation {
-    from { background: white; }
-    from { background: #fdfd54; }
-    to   { background: default; }
-}
-
-@keyframes flash-animation {
-    from { background: white; }
-    from { background: #fdfd54; }
-    to   { background: default; }
 }
 
 /* specific styling for ids or components */
@@ -251,6 +211,19 @@ span.wsp{
     box-shadow: none;
 }
 
+#gdb_settings_modal{
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  left: 0;
+  top: 0;
+  padding: 25px;
+  z-index: 120;
+  background: white;
+  overflow: auto;
+}
+
+
 #gdb_mi_output{
   font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
   overflow: auto;
@@ -266,6 +239,7 @@ span.wsp{
 ul.variable{
     padding-left: 5px;
     border: 0px;
+    margin: 0;
 }
 /* Show type of variable in lighter text */
 .var_type{

@@ -243,18 +243,23 @@ def gdbgui():
     else:
         time_sec = int((datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)).total_seconds())
     interpreter = 'lldb' if app.config['LLDB'] else 'gdb'
+
+    THEMES = ['default', 'monokai']
     initial_data = {
             'gdbgui_version': __version__,
             'interpreter': interpreter,
             'initial_binary_and_args': app.config['initial_binary_and_args'],
             'show_gdbgui_upgrades': app.config['show_gdbgui_upgrades'],
+            'themes': THEMES,
         }
+
 
     return render_template('gdbgui.pug',
         timetag_to_prevent_caching=time_sec,
         debug=json.dumps(app.debug),
         interpreter=interpreter,
-        initial_data=json.dumps(initial_data))
+        initial_data=json.dumps(initial_data),
+        themes=THEMES)
 
 
 @app.route('/shutdown')
