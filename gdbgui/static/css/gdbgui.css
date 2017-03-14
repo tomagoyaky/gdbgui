@@ -84,21 +84,17 @@ td{
 .no_padding{
   padding: 2px !important;
 }
-.code pre, table.code {
-    margin: 0px;
-    padding: 0px;
-    border-width: 0px;
-    width: 100%;
-    background-color: transparent;
-}
 .highlight{
   background: rgba(255, 255, 0, 0.5) !important;
 }
 div.breakpoint{
   border: solid;
+  /* need top and bottom border so when hovering and showing border on row, there is no "jumping" */
   border-width: 0px;
+  border-top-width: 5px;
+  border-right-width: 1px;
   border-bottom-width: 1px;
-  border-color: #f5f5f5;
+  border-color: #f5f5f5; /* make border color the same as the background color */
 }
 .breakpoint:hover{
   background-color: #f5f5f5;
@@ -113,10 +109,13 @@ div.breakpoint:hover a span.breakpoint_trashcan, .variable:hover .right_help_ico
 }
 .line_num{
   width: 50px;
-  border-width: 0;
-  border-right: 1px;
+  border-width: 0px;
+  border-top-width: 1px;
+  border-top-color: transparent;
+  border-right-width: 1px;
+  border-bottom-width: 0px;
   border-style: solid;
-  border-color: #c7c7c7;
+  border-right-color: #c7c7c7;
   padding-left: 10px;
   padding-right: 10px;
   font-size: 0.9em;
@@ -126,9 +125,6 @@ div.breakpoint:hover a span.breakpoint_trashcan, .variable:hover .right_help_ico
 /* the line number has its style changed if it has a breakpoint */
 .line_num.breakpoint, .line_num.disabled_breakpoint{
   color: black;
-  border-style: solid;
-  border-color: #000000;
-  border-width: 1px;
 }
 .line_num.breakpoint{
   background: #33cdff !important;
@@ -211,16 +207,27 @@ span.wsp{
     box-shadow: none;
 }
 
-#gdb_settings_modal{
+
+#settings_container{
   width: 100%;
   height: 100%;
   position: fixed;
   left: 0;
   top: 0;
-  padding: 25px;
+  z-index: 120;
+  background: rgba(0,0,0, 0.8);
+  overflow: auto;
+}
+#gdb_settings_modal{
+  width: 800px;
+  margin: 50px;
+  padding: 40px;
   z-index: 120;
   background: white;
+  max-height: 85%;
   overflow: auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 

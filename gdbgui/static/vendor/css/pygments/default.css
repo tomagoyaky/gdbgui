@@ -5,7 +5,15 @@
 .default .loc { color: black; }
 
 /* when hovering, set background color of entire row */
-.default .paused_on_line, .default .source_code_row:hover td{ background-color: #bbefff; }
+.default .paused_on_line, .default .srccode:hover td{
+    background-color: #bbefff;
+    border-style: solid;
+    border-top-width: 1px;
+    border-right-width: 0px;
+    border-bottom-width: 1px;
+    border-left-width: 0px;
+    border-color: #7878ff !important;
+}
 
 .default .assembly { color: black; }
 

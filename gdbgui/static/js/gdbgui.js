@@ -887,7 +887,7 @@ const SourceCode = {
     el_title: $('#source_code_heading'),
     el_jump_to_line_input: $('#jump_to_line'),
     init: function(){
-        $("body").on("click", ".source_code_row td.line_num", SourceCode.click_gutter)
+        $("body").on("click", ".srccode td.line_num", SourceCode.click_gutter)
         $("body").on("click", ".view_file", SourceCode.click_view_file)
         $('#checkbox_show_assembly').change(SourceCode.show_assembly_checkbox_changed)
         $('#refresh_cached_source_files').click(SourceCode.refresh_cached_source_files)
@@ -1070,7 +1070,7 @@ const SourceCode = {
             let assembly_for_line = SourceCode.get_assembly_html_for_line(show_assembly, assembly, line_num, addr)
 
             tbody.push(`
-                <tr class='source_code_row'>
+                <tr class='srccode'>
                     <td valign="top" class='line_num right_border' data-line=${line_num} style='width: 30px;'>
                         <div>${line_num}</div>
                     </td>
@@ -1517,7 +1517,7 @@ const Registers = {
  */
 const Settings = {
     el: $('#gdbgui_settings_button'),
-    pane: $('#gdb_settings_modal'),
+    pane: $('#settings_container'),
     init: function(){
         $('body').on('change', '#theme_selector', Settings.theme_selection_changed)
         $('body').on('click', '.toggle_settings_view', Settings.click_toggle_settings_view)
@@ -1610,8 +1610,11 @@ const Settings = {
 
             )
     },
-    click_toggle_settings_view: function(){
-        Settings.pane.toggleClass('hidden')
+    click_toggle_settings_view: function(e){
+        if(e.target.classList.contains('toggle_settings_view')){  // need this check in case background div has this class
+            e.stopPropagation()  // need this to prevent toggling twice rapidly if a toggle button is over a div
+            Settings.pane.toggleClass('hidden')
+        }
     },
     theme_selection_changed: function(e){
         State.set('current_theme', e.currentTarget.value)

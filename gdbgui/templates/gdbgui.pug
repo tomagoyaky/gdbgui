@@ -47,32 +47,35 @@ body(style='margin: 0')
 
 
     //- source code
-    div#main(style='height: 100%;')
-        div.flexrow
-            //- displays source file path input, and dropdown
-            input#source_file_input.form-control.dropdown-input(autocomplete='off', placeholder='Enter source file path to view, or load binary then populate and select from dropdown', style='flex:1')
+    table#main(style='height: 100%; width: 100%')
+        tr(style='height: 30px')
+            td.flexrow
+                //- displays source file path input, and dropdown
+                input#source_file_input.form-control.dropdown-input(autocomplete='off', placeholder='Enter source file path to view, or load binary then populate and select from dropdown', style='flex:1')
+                button#source_file_dropdown_button.dropdown-btn(type="button")
+                    span.caret
 
-            button#source_file_dropdown_button.dropdown-btn(type="button")
-                span.caret
-
-        div.flexrow
-            //- displays loaded file path and input to jump to line
-            span#source_code_heading.lighttext(style="margin-right: 5px;") (no source code file loaded)
-            button.btn.btn-xs.btn-default#refresh_cached_source_files(style='margin-left: 10px; height=25px; max-height: 25px;') reload
-                span.glyphicon.glyphicon-refresh(style='margin-left: 6px;')
+        tr(style='height: 30px')
+            td.flexrow
+                //- displays loaded file path and input to jump to line
+                span#source_code_heading.lighttext(style="margin-right: 5px;") (no source code file loaded)
+                button.btn.btn-xs.btn-default#refresh_cached_source_files(style='margin-left: 10px; height=25px; max-height: 25px;') reload
+                    span.glyphicon.glyphicon-refresh(style='margin-left: 6px;')
 
 
-            //- input to jump to a line in the source code
-            input#jump_to_line.form-control.dropdown-input(autocomplete='on', placeholder='jump to line', title='Enter line number, then press enter', style="width: 150px; height: 25px; margin-left: 10")
+                //- input to jump to a line in the source code
+                input#jump_to_line.form-control.dropdown-input(autocomplete='on', placeholder='jump to line', title='Enter line number, then press enter', style="width: 150px; height: 25px; margin-left: 10")
 
-            label(style='margin-left: 10px; font-weight: normal;')
-                input#checkbox_show_assembly(type='checkbox')
-                ='disassemble'
+                label(style='margin-left: 10px; font-weight: normal;')
+                    input#checkbox_show_assembly(type='checkbox')
+                    ='disassemble'
 
-        div#code_container.gdb_content_div(style='height: 100%; overflow: auto; padding-bottom: 100px;')
-            table#code_table.code
-                tr
-                    td(style='font-family: arial; font-style: italic;') Source code will be displayed here when applicable
+        tr
+            td
+                div#code_container.gdb_content_div(style='height: 100%; overflow: auto; padding-bottom: 100px;')
+                    table#code_table.code
+                        tr
+                            td(style='font-family: arial; font-style: italic;') Source code will be displayed here when applicable
 
     //- stack, vars, memory, breakpoints, registers
     div#right
@@ -193,14 +196,15 @@ body(style='margin: 0')
 
 
 //- modal window, hidden by default
-#gdb_settings_modal.hidden
-    button.close.toggle_settings_view(type='button') ×
-    h4 Settings
+#settings_container.hidden.toggle_settings_view
+    #gdb_settings_modal
+        button.close.toggle_settings_view(type='button') ×
+        h4 Settings
 
-    #settings_body
+        #settings_body
 
-    div(style='margin-top: 20px;')
-        button.btn.btn-success.toggle_settings_view(type='button', data-dismiss='modal') Close
+        div(style='margin-top: 20px;')
+            button.btn.btn-success.toggle_settings_view(type='button', data-dismiss='modal') Close
 
 script.
     initial_data = JSON.parse('!{initial_data}')
